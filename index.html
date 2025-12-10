@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple JS Image & Label Viewer</title>
+    <style>
+        body { 
+            font-family: sans-serif; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            background: #f0f0f0; 
+            margin: 0;
+            padding: 20px 0;
+        }
+        h1 { margin-bottom: 30px; color: #333; }
+        
+        /* Gallery Container */
+        #gallery { 
+            display: flex; 
+            flex-wrap: wrap; 
+            justify-content: center; 
+            gap: 30px; 
+            max-width: 1200px;
+        }
+        
+        /* Card for each item */
+        .card { 
+            background: white; 
+            padding: 15px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+            width: 320px; 
+            text-align: left;
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.15); 
+        }
+
+        img { 
+            width: 100%; 
+            height: auto;
+            border-radius: 4px; 
+            display: block; 
+            margin-bottom: 10px; 
+            max-height: 250px; 
+            object-fit: contain;
+            border: 1px solid #eee;
+        }
+
+        .filename { 
+            font-weight: bold; 
+            color: #007bff; 
+            margin-bottom: 8px; 
+            font-size: 1.1em;
+        }
+        .label-text { 
+            color: #555; 
+            font-size: 0.9em; 
+            white-space: pre-wrap; 
+            word-wrap: break-word;
+            border-top: 1px dashed #ddd;
+            padding-top: 10px;
+        }
+        .loading-msg {
+            color: #888;
+            font-style: italic;
+        }
+        .error-msg {
+            color: #cc0000;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Image & Label Gallery</h1>
+    <div id="gallery"><p class="loading-msg">Scanning repository directory...</p></div>
+
+    <script>
+        // ======================================================
+        // ** CONFIGURATION **
+        // ======================================================
+        const GITHUB_USERNAME = 'your-username'; 
+        const GITHUB_REPO     = 'your-repo-name';
+        const BRANCH_NAME     = 'main'; 
+        // ======================================================
+
+        const gallery = document.getElementById('gallery');
+        
+        // Helper function to strip extensions (e.g. "cat.jpg" -> "cat")
+        const getBaseName = (filename) => filename.replace(/\.[^/.]+$/, "");
+        
+        // Helper function to get extension (e.g. "cat.jpg" -> ".jpg")
+        const getExtension = (filename) => filename.substring(filename.lastIndexOf('.'));
+
+        async function loadGallery() {
+            const photoDir = 'images/train';
+            const labelDir = 'labels/train';
+            
+            // 1. Construct the GitHub API URLs
+            const photoApiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${photoDir}?ref=${BRANCH_NAME}`;
+            const labelApiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${labelDir}?ref=${BRANCH_NAME}`;
+
+            try {
+                // 2. Fetch both directories simultaneously
+                const [photoRes, labelRes] = await Promise.all([
+                    fetch(photoApiUrl),
+                    fetch(labelApiUrl)
+                ]);
+
+                if (!photoRes.ok) throw new Error(`Could not find photos folder. Check repo settings. (${photoRes.status})`);
+                
+                // 3. Convert responses to JSON arrays of file objects
+                const photoFiles = await photoRes.json();
+                const labelFiles = labelRes.ok ? await labelRes.json() : [];
+
+                // 4. Create a "Map" of available labels for quick lookup
+                // Key = basename (e.g., "cat"), Value = extension (e.g., ".txt")
+                const labelMap = {};
+                labelFiles.forEach(file => {
+                    labelMap[getBaseName(file.name)] = getExtension(file.name);
+                });
+
+                // Clear "Loading..." message
+                gallery.innerHTML = '';
+
+                // 5. Generate Cards
+                photoFiles.forEach(file => {
+                    // Skip if it's not a valid image file (optional filter)
+                    if (!file.name.match(/\.(jpg|jpeg|png|gif|webp)$/i)) return;
+
+                    const baseName = getBaseName(file.name);
+                    const photoExt = getExtension(file.name);
+                    
+                    // Look up if we found a matching label file
+                    // If found, use that extension. If not, default to .txt (it will just fail gracefully later)
+                    const matchingLabelExt = labelMap[baseName] || ".txt";
+
+                    createCard({
+                        name: baseName,
+                        photoExt: photoExt,
+                        labelExt: matchingLabelExt,
+                        // Pass the raw download URL provided by GitHub API if available, 
+                        // otherwise construct relative path
+                        photoPath: file.download_url || `images/photos/${file.name}`,
+                        labelPath: `images/labels/${baseName}${matchingLabelExt}`
+                    });
+                });
+
+            } catch (error) {
+                console.error(error);
+                gallery.innerHTML = `<p class="error-msg">Error loading gallery: ${error.message}<br>Make sure the repository is public and the paths are correct.</p>`;
+            }
+        }
+
+        function createCard(item) {
+            const card = document.createElement('div');
+            card.className = 'card';
+
+            // 1. Filename Title
+            const nameDisplay = document.createElement('div');
+            nameDisplay.className = 'filename';
+            nameDisplay.innerText = item.name + item.photoExt;
+
+            // 2. Load the Image
+            const img = document.createElement('img');
+            img.src = item.photoPath; 
+            img.alt = item.name;
+            
+            // 3. Load the Label
+            const labelDiv = document.createElement('div');
+            labelDiv.className = 'label-text';
+            labelDiv.textContent = `Loading ${item.labelExt}...`;
+
+            // If label exists in our map or defaults to text/json
+            if (item.labelExt === ".txt" || item.labelExt === ".json") {
+                fetch(item.labelPath)
+                    .then(response => {
+                        if (!response.ok) throw new Error("No label");
+                        return response.text();
+                    })
+                    .then(text => {
+                        if (item.labelExt === ".json") {
+                            try {
+                                labelDiv.textContent = JSON.stringify(JSON.parse(text), null, 2);
+                            } catch(e) { labelDiv.textContent = text; }
+                        } else {
+                            labelDiv.textContent = text;
+                        }
+                    })
+                    .catch(() => labelDiv.textContent = `Label (${item.labelExt}) not available.`);
+            } else {
+                // If the label is an image/mask
+                labelDiv.innerHTML = `<img src="${item.labelPath}" alt="Label Image" style="max-height: 100px; margin: 0; border: none;">`;
+            }
+
+            card.appendChild(nameDisplay);
+            card.appendChild(img);
+            card.appendChild(labelDiv);
+            gallery.appendChild(card);
+        }
+
+        // Initialize
+        loadGallery();
+    </script>
+
+</body>
+</html>
