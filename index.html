@@ -1,209 +1,339 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Simple JS Image & Label Viewer</title>
+    <title>Dataset Viewer</title>
     <style>
         body { 
-            font-family: sans-serif; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             display: flex; 
             flex-direction: column; 
             align-items: center; 
-            background: #f0f0f0; 
+            background: #f4f6f8; 
             margin: 0;
-            padding: 20px 0;
+            padding: 40px 20px;
         }
-        h1 { margin-bottom: 30px; color: #333; }
+        h1 { margin-bottom: 20px; color: #222; text-align: center; }
         
-        /* Gallery Container */
+        /* === Button Controls === */
+        .controls {
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            background: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .btn {
+            border: 1px solid #d1d5da;
+            background: white;
+            padding: 10px 24px;
+            border-radius: 20px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            color: #586069;
+            transition: all 0.2s ease;
+        }
+
+        .btn:hover { background: #f6f8fa; }
+
+        .btn.active {
+            background: #0366d6;
+            color: white;
+            border-color: #0366d6;
+            box-shadow: 0 2px 5px rgba(3, 102, 214, 0.3);
+        }
+
+        /* Gallery Grid */
         #gallery { 
             display: flex; 
             flex-wrap: wrap; 
             justify-content: center; 
-            gap: 30px; 
-            max-width: 1200px;
+            gap: 20px; 
+            max-width: 1400px;
+            width: 100%;
         }
         
-        /* Card for each item */
+        /* Cards */
         .card { 
             background: white; 
-            padding: 15px; 
+            padding: 10px; 
             border-radius: 8px; 
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
-            width: 320px; 
-            text-align: left;
-            transition: transform 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+            width: 300px; 
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #e1e4e8;
         }
 
-        .card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 6px 15px rgba(0,0,0,0.15); 
+        .card-header {
+            font-size: 0.85em;
+            color: #586069;
+            margin-bottom: 8px;
+            font-family: monospace; 
+            word-break: break-all;
         }
 
-        img { 
+        /* Thumbnail Images */
+        .card img { 
             width: 100%; 
-            height: auto;
+            height: 200px; 
             border-radius: 4px; 
             display: block; 
-            margin-bottom: 10px; 
-            max-height: 250px; 
-            object-fit: contain;
-            border: 1px solid #eee;
+            object-fit: contain; 
+            background-color: #f6f8fa; 
+            border: 1px solid #eaecef;
+            cursor: zoom-in; /* Indicates it can be clicked */
+            transition: opacity 0.2s;
         }
 
-        .filename { 
-            font-weight: bold; 
-            color: #007bff; 
-            margin-bottom: 8px; 
-            font-size: 1.1em;
+        .card img:hover {
+            opacity: 0.8;
         }
-        .label-text { 
-            color: #555; 
-            font-size: 0.9em; 
+
+        .label-box { 
+            margin-top: 10px;
+            background: #fafbfc;
+            border: 1px solid #e1e4e8;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 0.85em; 
+            color: #24292e;
             white-space: pre-wrap; 
             word-wrap: break-word;
-            border-top: 1px dashed #ddd;
-            padding-top: 10px;
+            flex-grow: 1; 
+            font-family: monospace;
+            max-height: 150px;
+            overflow-y: auto;
         }
-        .loading-msg {
-            color: #888;
-            font-style: italic;
+
+        .loading-msg { color: #586069; font-style: italic; margin-top: 20px; }
+        .error-msg { color: #cb2431; background: #ffeef0; padding: 15px; border-radius: 6px; text-align: center; }
+
+        /* === MODAL (Lightbox) STYLES === */
+        #imageModal {
+            display: none; /* Hidden by default */
+            position: fixed; 
+            z-index: 1000; 
+            left: 0;
+            top: 0;
+            width: 100%; 
+            height: 100%; 
+            overflow: auto; 
+            background-color: rgba(0,0,0,0.85); 
+            align-items: center;
+            justify-content: center;
         }
-        .error-msg {
-            color: #cc0000;
+
+        /* Modal Image */
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 90vh;
+            border-radius: 5px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            animation: zoom 0.3s;
+        }
+
+        @keyframes zoom {
+            from {transform:scale(0)} 
+            to {transform:scale(1)}
+        }
+
+        /* Close Button */
+        .close {
+            position: absolute;
+            top: 20px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+            z-index: 1001;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #bbb;
+            text-decoration: none;
+            cursor: pointer;
         }
     </style>
 </head>
 <body>
 
-    <h1>Image & Label Gallery</h1>
-    <div id="gallery"><p class="loading-msg">Scanning repository directory...</p></div>
+    <img src="https://api.github.com/repos/maariz0502/2026RDaC_Dataset/contents/logo/UCO-logo.png?ref=$main" alt="Logo of UCO">
+    <h1>Dataset for Affordable Traffic Light Recognition under Monocular Night Vision in Oklahoma</h1>
+    
+    <div class="controls">
+        <button id="btn-train" class="btn active" onclick="switchDataset('train')">Training Set</button>
+        <button id="btn-val" class="btn" onclick="switchDataset('val')">Validation Set</button>
+    </div>
+
+    <div id="gallery"></div>
+
+    <div id="imageModal" onclick="closeModal()">
+        <span class="close">&times;</span>
+        <img class="modal-content" id="img01">
+    </div>
 
     <script>
         // ======================================================
         // ** CONFIGURATION **
         // ======================================================
-        const GITHUB_USERNAME = 'your-username'; 
-        const GITHUB_REPO     = 'your-repo-name';
+        const GITHUB_USERNAME = 'maariz0502'; 
+        const GITHUB_REPO     = '2026RDaC_Dataset';
         const BRANCH_NAME     = 'main'; 
         // ======================================================
 
         const gallery = document.getElementById('gallery');
+        const btnTrain = document.getElementById('btn-train');
+        const btnVal = document.getElementById('btn-val');
         
-        // Helper function to strip extensions (e.g. "cat.jpg" -> "cat")
+        // Modal elements
+        const modal = document.getElementById('imageModal');
+        const modalImg = document.getElementById("img01");
+
+        // Helpers
         const getBaseName = (filename) => filename.replace(/\.[^/.]+$/, "");
-        
-        // Helper function to get extension (e.g. "cat.jpg" -> ".jpg")
         const getExtension = (filename) => filename.substring(filename.lastIndexOf('.'));
 
-        async function loadGallery() {
-            const photoDir = 'images/train';
-            const labelDir = 'labels/train';
+        // === Modal Functions ===
+        function openModal(imgSrc) {
+            modal.style.display = "flex";
+            modalImg.src = imgSrc;
+        }
+
+        function closeModal() {
+            modal.style.display = "none";
+        }
+        
+        // Close on ESC key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === "Escape") {
+                closeModal();
+            }
+        });
+
+        // === Dataset Logic ===
+        function switchDataset(type) {
+            if (type === 'train') {
+                btnTrain.classList.add('active');
+                btnVal.classList.remove('active');
+            } else {
+                btnVal.classList.add('active');
+                btnTrain.classList.remove('active');
+            }
+            loadGallery(type);
+        }
+
+        async function loadGallery(datasetType) {
+            gallery.innerHTML = `<p class="loading-msg">Scanning <strong>${datasetType}</strong> directory via GitHub API...</p>`;
             
-            // 1. Construct the GitHub API URLs
-            const photoApiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${photoDir}?ref=${BRANCH_NAME}`;
-            const labelApiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${labelDir}?ref=${BRANCH_NAME}`;
+            const PHOTO_DIR = `images/${datasetType}`;
+            const LABEL_DIR = `labels/${datasetType}`;
+
+            const photoApiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${PHOTO_DIR}?ref=${BRANCH_NAME}`;
+            const labelApiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${LABEL_DIR}?ref=${BRANCH_NAME}`;
 
             try {
-                // 2. Fetch both directories simultaneously
                 const [photoRes, labelRes] = await Promise.all([
                     fetch(photoApiUrl),
                     fetch(labelApiUrl)
                 ]);
 
-                if (!photoRes.ok) throw new Error(`Could not find photos folder. Check repo settings. (${photoRes.status})`);
+                if (!photoRes.ok) throw new Error(`Could not find folder: ${PHOTO_DIR}`);
                 
-                // 3. Convert responses to JSON arrays of file objects
                 const photoFiles = await photoRes.json();
                 const labelFiles = labelRes.ok ? await labelRes.json() : [];
 
-                // 4. Create a "Map" of available labels for quick lookup
-                // Key = basename (e.g., "cat"), Value = extension (e.g., ".txt")
                 const labelMap = {};
                 labelFiles.forEach(file => {
                     labelMap[getBaseName(file.name)] = getExtension(file.name);
                 });
 
-                // Clear "Loading..." message
-                gallery.innerHTML = '';
+                gallery.innerHTML = ''; 
 
-                // 5. Generate Cards
+                if (photoFiles.length === 0) {
+                    gallery.innerHTML = `<p class="loading-msg">No images found in ${PHOTO_DIR}</p>`;
+                    return;
+                }
+
                 photoFiles.forEach(file => {
-                    // Skip if it's not a valid image file (optional filter)
-                    if (!file.name.match(/\.(jpg|jpeg|png|gif|webp)$/i)) return;
+                    if (!file.name.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) return;
 
                     const baseName = getBaseName(file.name);
                     const photoExt = getExtension(file.name);
-                    
-                    // Look up if we found a matching label file
-                    // If found, use that extension. If not, default to .txt (it will just fail gracefully later)
-                    const matchingLabelExt = labelMap[baseName] || ".txt";
+                    const labelExt = labelMap[baseName] || ".txt";
 
-                    createCard({
-                        name: baseName,
-                        photoExt: photoExt,
-                        labelExt: matchingLabelExt,
-                        // Pass the raw download URL provided by GitHub API if available, 
-                        // otherwise construct relative path
-                        photoPath: file.download_url || `images/photos/${file.name}`,
-                        labelPath: `images/labels/${baseName}${matchingLabelExt}`
-                    });
+                    const relativePhotoPath = `${PHOTO_DIR}/${file.name}`;
+                    const relativeLabelPath = `${LABEL_DIR}/${baseName}${labelExt}`;
+
+                    createCard(baseName + photoExt, relativePhotoPath, relativeLabelPath, labelExt);
                 });
 
             } catch (error) {
                 console.error(error);
-                gallery.innerHTML = `<p class="error-msg">Error loading gallery: ${error.message}<br>Make sure the repository is public and the paths are correct.</p>`;
+                gallery.innerHTML = `<div class="error-msg">
+                    <strong>Error loading ${datasetType} set</strong><br/>
+                    ${error.message}<br/><br/>
+                </div>`;
             }
         }
 
-        function createCard(item) {
+        function createCard(fileName, photoPath, labelPath, labelExt) {
             const card = document.createElement('div');
             card.className = 'card';
 
-            // 1. Filename Title
-            const nameDisplay = document.createElement('div');
-            nameDisplay.className = 'filename';
-            nameDisplay.innerText = item.name + item.photoExt;
+            const header = document.createElement('div');
+            header.className = 'card-header';
+            header.innerText = fileName;
 
-            // 2. Load the Image
             const img = document.createElement('img');
-            img.src = item.photoPath; 
-            img.alt = item.name;
+            img.src = photoPath; 
+            img.loading = "lazy"; 
+            img.alt = fileName;
             
-            // 3. Load the Label
-            const labelDiv = document.createElement('div');
-            labelDiv.className = 'label-text';
-            labelDiv.textContent = `Loading ${item.labelExt}...`;
+            // Add click event to open modal
+            img.onclick = function() {
+                openModal(this.src);
+            };
+            
+            const labelBox = document.createElement('div');
+            labelBox.className = 'label-box';
+            labelBox.innerText = "Loading label...";
 
-            // If label exists in our map or defaults to text/json
-            if (item.labelExt === ".txt" || item.labelExt === ".json") {
-                fetch(item.labelPath)
-                    .then(response => {
-                        if (!response.ok) throw new Error("No label");
-                        return response.text();
+            if (labelExt === ".txt" || labelExt === ".json" || labelExt === ".xml") {
+                fetch(labelPath)
+                    .then(res => {
+                        if(!res.ok) throw new Error("Missing");
+                        return res.text();
                     })
                     .then(text => {
-                        if (item.labelExt === ".json") {
-                            try {
-                                labelDiv.textContent = JSON.stringify(JSON.parse(text), null, 2);
-                            } catch(e) { labelDiv.textContent = text; }
+                        if(labelExt === ".json") {
+                            try { labelBox.innerText = JSON.stringify(JSON.parse(text), null, 2); }
+                            catch(e) { labelBox.innerText = text; }
                         } else {
-                            labelDiv.textContent = text;
+                            labelBox.innerText = text;
                         }
                     })
-                    .catch(() => labelDiv.textContent = `Label (${item.labelExt}) not available.`);
+                    .catch(() => labelBox.innerText = "No label file found.");
             } else {
-                // If the label is an image/mask
-                labelDiv.innerHTML = `<img src="${item.labelPath}" alt="Label Image" style="max-height: 100px; margin: 0; border: none;">`;
+                labelBox.innerHTML = `<img src="${labelPath}" style="height:100px; object-fit:contain; border:none;">`;
             }
 
-            card.appendChild(nameDisplay);
+            card.appendChild(header);
             card.appendChild(img);
-            card.appendChild(labelDiv);
+            card.appendChild(labelBox);
             gallery.appendChild(card);
         }
 
-        // Initialize
-        loadGallery();
+        // Initialize with TRAIN set by default
+        switchDataset('train');
     </script>
 
 </body>
