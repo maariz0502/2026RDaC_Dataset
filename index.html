@@ -21,7 +21,7 @@
         .controls {
             margin-bottom: 30px;
             display: flex;
-            flex-wrap: wrap; /* Allow buttons to stack on very small screens */
+            flex-wrap: wrap; 
             justify-content: center;
             gap: 15px;
             background: white;
@@ -67,12 +67,19 @@
             padding: 10px; 
             border-radius: 8px; 
             box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
-            /* Default Desktop Width */
             width: 300px; 
             display: flex;
             flex-direction: column;
             border: 1px solid #e1e4e8;
-            box-sizing: border-box; /* Ensures padding doesn't add to width */
+            box-sizing: border-box; 
+            /* Animation for smooth entry */
+            animation: fadeIn 0.4s ease forwards;
+            opacity: 0; /* Start hidden for animation */
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .card-header {
@@ -85,7 +92,7 @@
 
         .card img { 
             width: 100%; 
-            height: 200px; /* Fixed height for desktop consistency */
+            height: 200px; 
             border-radius: 4px; 
             display: block; 
             object-fit: contain; 
@@ -113,7 +120,26 @@
             overflow-y: auto;
         }
 
-        /* Header Logo Styling */
+        /* The Sentinel: Invisible element at the bottom to trigger scrolling */
+        #sentinel {
+            width: 100%;
+            height: 50px; /* Give it height so it's easily detectable */
+            margin-top: 20px;
+        }
+
+        /* Spinner for loading state */
+        .loading-spinner {
+            display: none; 
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
         .header img {
             max-height: 150px; 
             max-width: 100%; 
@@ -124,35 +150,12 @@
             margin-right: auto;
         }
 
-        /* === 2. MOBILE RESPONSIVENESS === */
         @media (max-width: 600px) {
-            body {
-                padding: 20px 10px; /* Reduce padding on mobile */
-            }
-
-            .card {
-                width: 100%; /* Card takes full width */
-                max-width: 450px; /* Stop it from getting too big on tablets */
-            }
-
-            .card img {
-                /* Allow image to grow taller if needed, or keep fixed depending on preference.
-                   'contain' ensures we see the whole traffic light image. */
-                height: 250px; 
-            }
-
-            .controls {
-                width: 100%;
-                box-sizing: border-box;
-                border-radius: 12px; /* Less rounded corners on mobile */
-            }
-            
-            .btn {
-                flex: 1; /* Buttons share width equally */
-                text-align: center;
-                padding: 12px 10px;
-                font-size: 0.9rem;
-            }
+            body { padding: 20px 10px; }
+            .card { width: 100%; max-width: 450px; }
+            .card img { height: 250px; }
+            .controls { width: 100%; box-sizing: border-box; border-radius: 12px; }
+            .btn { flex: 1; text-align: center; padding: 12px 10px; font-size: 0.9rem; }
         }
 
         /* Modal */
@@ -169,7 +172,7 @@
 
         .modal-content {
             margin: auto; display: block;
-            max-width: 95%; max-height: 90vh; /* Bigger on mobile modal */
+            max-width: 95%; max-height: 90vh; 
             border-radius: 5px;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
             animation: zoom 0.3s;
@@ -200,6 +203,9 @@
     </div>
 
     <div id="gallery"></div>
+    
+    <div id="loader" class="loading-spinner"></div>
+    <div id="sentinel"></div>
 
     <div id="imageModal" onclick="closeModal()">
         <span class="close">&times;</span>
@@ -214,6 +220,8 @@
         const btnVal = document.getElementById('btn-val');
         const modal = document.getElementById('imageModal');
         const modalImg = document.getElementById("img01");
+        const loader = document.getElementById('loader');
+        const sentinel = document.getElementById('sentinel');
 
         // Helper functions
         const getBaseName = (filename) => filename.replace(/\.[^/.]+$/, "");
@@ -226,8 +234,30 @@
         function closeModal() { modal.style.display = "none"; }
         document.addEventListener('keydown', (e) => { if (e.key === "Escape") closeModal(); });
 
-        // === Dataset Logic ===
+        // === Infinite Scroll Logic ===
+        let currentFiles = [];
+        let loadedCount = 0;
+        const BATCH_SIZE = 4;
+        let observer;
+        let isLoading = false;
+
+        // The Observer sees when the user hits the bottom
+        const observerOptions = {
+            root: null,
+            rootMargin: '100px', // trigger a bit before reaching exact bottom
+            threshold: 0.1
+        };
+
+        const handleIntersect = (entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && !isLoading) {
+                    renderNextBatch();
+                }
+            });
+        };
+
         function switchDataset(type) {
+            // Update UI
             if (type === 'train') {
                 btnTrain.classList.add('active');
                 btnVal.classList.remove('active');
@@ -235,33 +265,79 @@
                 btnVal.classList.add('active');
                 btnTrain.classList.remove('active');
             }
-            loadGallery(type);
+            
+            // Reset State
+            gallery.innerHTML = '';
+            loadedCount = 0;
+            currentFiles = [];
+            
+            // Cleanup old observer
+            if (observer) observer.disconnect();
+            
+            // Initialize
+            loadGalleryData(type);
         }
 
-        function loadGallery(datasetType) {
-            gallery.innerHTML = '';
-            
+        function loadGalleryData(datasetType) {
             if (typeof GALLERY_DATA === 'undefined') {
-                gallery.innerHTML = `<div style="color:red; text-align:center;">
-                    <strong>Error: gallery_data.js not found.</strong><br>
-                    Please run 'python generate_data.py' locally.
-                </div>`;
+                gallery.innerHTML = `<div style="color:red; text-align:center;">Error: gallery_data.js not found.</div>`;
                 return;
             }
 
-            const files = GALLERY_DATA[datasetType];
+            currentFiles = GALLERY_DATA[datasetType] || [];
             
-            if (!files || files.length === 0) {
+            if (currentFiles.length === 0) {
                 gallery.innerHTML = `<p style="color:#666;">No images found for ${datasetType}.</p>`;
                 return;
             }
 
+            // Start observing the sentinel
+            observer = new IntersectionObserver(handleIntersect, observerOptions);
+            observer.observe(sentinel);
+            
+            // Initial load
+            renderNextBatch(); 
+        }
+
+        function renderNextBatch() {
+            if (loadedCount >= currentFiles.length) {
+                loader.style.display = 'none';
+                return; // Nothing left to load
+            }
+
+            isLoading = true;
+            loader.style.display = 'block';
+
+            const nextBatch = currentFiles.slice(loadedCount, loadedCount + BATCH_SIZE);
+            const datasetType = btnTrain.classList.contains('active') ? 'train' : 'val';
+
             // Create cards
-            files.forEach(filename => {
+            nextBatch.forEach(filename => {
                 const photoPath = `images/${datasetType}/${filename}`;
                 const labelPath = `labels/${datasetType}/${getBaseName(filename)}.txt`;
                 createCard(filename, photoPath, labelPath);
             });
+
+            loadedCount += nextBatch.length;
+            loader.style.display = 'none';
+            isLoading = false;
+
+            checkIfShouldLoadMore();
+        }
+
+        function checkIfShouldLoadMore() {
+            // Give the DOM a moment to paint the new images
+            setTimeout(() => {
+                const sentinelRect = sentinel.getBoundingClientRect();
+                const windowHeight = window.innerHeight;
+
+                // If sentinel is above the bottom of the screen (visible)
+                // AND we still have files to load
+                if (sentinelRect.top <= windowHeight && loadedCount < currentFiles.length) {
+                    // Recursive call to fill the screen
+                    renderNextBatch();
+                }
+            }, 100);
         }
 
         function createCard(fileName, photoPath, labelPath) {
