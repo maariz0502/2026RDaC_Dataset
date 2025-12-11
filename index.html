@@ -12,9 +12,10 @@
             margin: 0;
             padding: 40px 20px;
         }
-        h1 { margin-bottom: 20px; color: #222; text-align: center; }
+        h1 { margin-bottom: 10px; color: #222; text-align: center; }
+        h2 { margin-bottom: 30px; color: #555; font-weight: normal; }
         
-        /* === Button Controls === */
+        /* === Controls === */
         .controls {
             margin-bottom: 30px;
             display: flex;
@@ -76,7 +77,6 @@
             word-break: break-all;
         }
 
-        /* Thumbnail Images */
         .card img { 
             width: 100%; 
             height: 200px; 
@@ -85,13 +85,11 @@
             object-fit: contain; 
             background-color: #f6f8fa; 
             border: 1px solid #eaecef;
-            cursor: zoom-in; /* Indicates it can be clicked */
+            cursor: zoom-in;
             transition: opacity 0.2s;
         }
 
-        .card img:hover {
-            opacity: 0.8;
-        }
+        .card img:hover { opacity: 0.8; }
 
         .label-box { 
             margin-top: 10px;
@@ -109,66 +107,41 @@
             overflow-y: auto;
         }
 
-        .loading-msg { color: #586069; font-style: italic; margin-top: 20px; }
-        .error-msg { color: #cb2431; background: #ffeef0; padding: 15px; border-radius: 6px; text-align: center; }
-
-        /* === MODAL (Lightbox) STYLES === */
+        /* Modal */
         #imageModal {
-            display: none; /* Hidden by default */
+            display: none;
             position: fixed; 
             z-index: 1000; 
-            left: 0;
-            top: 0;
-            width: 100%; 
-            height: 100%; 
+            left: 0; top: 0;
+            width: 100%; height: 100%; 
             overflow: auto; 
             background-color: rgba(0,0,0,0.85); 
-            align-items: center;
-            justify-content: center;
+            align-items: center; justify-content: center;
         }
 
-        /* Modal Image */
         .modal-content {
-            margin: auto;
-            display: block;
-            max-width: 90%;
-            max-height: 90vh;
+            margin: auto; display: block;
+            max-width: 90%; max-height: 90vh;
             border-radius: 5px;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
             animation: zoom 0.3s;
         }
 
-        @keyframes zoom {
-            from {transform:scale(0)} 
-            to {transform:scale(1)}
-        }
+        @keyframes zoom { from {transform:scale(0)} to {transform:scale(1)} }
 
-        /* Close Button */
         .close {
-            position: absolute;
-            top: 20px;
-            right: 35px;
-            color: #f1f1f1;
-            font-size: 40px;
-            font-weight: bold;
-            transition: 0.3s;
-            cursor: pointer;
-            z-index: 1001;
+            position: absolute; top: 20px; right: 35px;
+            color: #f1f1f1; font-size: 40px; font-weight: bold;
+            transition: 0.3s; cursor: pointer; z-index: 1001;
         }
-
-        .close:hover,
-        .close:focus {
-            color: #bbb;
-            text-decoration: none;
-            cursor: pointer;
-        }
+        .close:hover { color: #bbb; }
     </style>
 </head>
 <body>
 
-    <img src="https://upload.wikimedia.org/wikipedia/commons/a/a7/UCO-logo.gif" alt="Logo of UCO" style="max-height: 400px; max-width: 400px;">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/a/a7/UCO-logo.gif" alt="Logo of UCO" style="max-height: 200px; max-width: 200px; margin-bottom:20px;">
     <h1>Dataset for Affordable Traffic Light Recognition under Monocular Night Vision in Oklahoma</h1>
-    <h2 style="text-align: left;">Mohammad Aariz, Shuai Zhang</h2>
+    <h2>Mohammad Aariz, Shuai Zhang</h2>
     
     <div class="controls">
         <button id="btn-train" class="btn active" onclick="switchDataset('train')">Training Set</button>
@@ -182,46 +155,32 @@
         <img class="modal-content" id="img01">
     </div>
 
-    <script>
-        // ======================================================
-        // ** CONFIGURATION **
-        // ======================================================
-        const GITHUB_USERNAME = 'maariz0502'; 
-        const GITHUB_REPO     = '2026RDaC_Dataset';
-        const BRANCH_NAME     = 'main'; 
-        // ======================================================
+    <script src="gallery_data.js"></script>
 
+    <script>
         const gallery = document.getElementById('gallery');
         const btnTrain = document.getElementById('btn-train');
         const btnVal = document.getElementById('btn-val');
-        
-        // Modal elements
         const modal = document.getElementById('imageModal');
         const modalImg = document.getElementById("img01");
 
-        // Helpers
+        // Helper functions
         const getBaseName = (filename) => filename.replace(/\.[^/.]+$/, "");
-        const getExtension = (filename) => filename.substring(filename.lastIndexOf('.'));
+        // Simple heuristic: assumes label is .txt. If you have mixed .json/.txt, 
+        // the python script could be updated to map them, but this usually works fine:
+        const getLabelPath = (dir, filename) => `labels/${dir}/${getBaseName(filename)}.txt`;
 
-        // === Modal Functions ===
+        // === Modal Logic ===
         function openModal(imgSrc) {
             modal.style.display = "flex";
             modalImg.src = imgSrc;
         }
-
-        function closeModal() {
-            modal.style.display = "none";
-        }
-        
-        // Close on ESC key
-        document.addEventListener('keydown', function(event) {
-            if (event.key === "Escape") {
-                closeModal();
-            }
-        });
+        function closeModal() { modal.style.display = "none"; }
+        document.addEventListener('keydown', (e) => { if (e.key === "Escape") closeModal(); });
 
         // === Dataset Logic ===
         function switchDataset(type) {
+            // Update Buttons
             if (type === 'train') {
                 btnTrain.classList.add('active');
                 btnVal.classList.remove('active');
@@ -232,61 +191,36 @@
             loadGallery(type);
         }
 
-        async function loadGallery(datasetType) {
-            gallery.innerHTML = `<p class="loading-msg">Scanning <strong>${datasetType}</strong> directory via GitHub API...</p>`;
+        function loadGallery(datasetType) {
+            gallery.innerHTML = '';
             
-            const PHOTO_DIR = `images/${datasetType}`;
-            const LABEL_DIR = `labels/${datasetType}`;
-
-            const photoApiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${PHOTO_DIR}?ref=${BRANCH_NAME}`;
-            const labelApiUrl = `https://api.github.com/repos/${GITHUB_USERNAME}/${GITHUB_REPO}/contents/${LABEL_DIR}?ref=${BRANCH_NAME}`;
-
-            try {
-                const [photoRes, labelRes] = await Promise.all([
-                    fetch(photoApiUrl),
-                    fetch(labelApiUrl)
-                ]);
-
-                if (!photoRes.ok) throw new Error(`Could not find folder: ${PHOTO_DIR}`);
-                
-                const photoFiles = await photoRes.json();
-                const labelFiles = labelRes.ok ? await labelRes.json() : [];
-
-                const labelMap = {};
-                labelFiles.forEach(file => {
-                    labelMap[getBaseName(file.name)] = getExtension(file.name);
-                });
-
-                gallery.innerHTML = ''; 
-
-                if (photoFiles.length === 0) {
-                    gallery.innerHTML = `<p class="loading-msg">No images found in ${PHOTO_DIR}</p>`;
-                    return;
-                }
-
-                photoFiles.forEach(file => {
-                    if (!file.name.match(/\.(jpg|jpeg|png|gif|webp|svg)$/i)) return;
-
-                    const baseName = getBaseName(file.name);
-                    const photoExt = getExtension(file.name);
-                    const labelExt = labelMap[baseName] || ".txt";
-
-                    const relativePhotoPath = `${PHOTO_DIR}/${file.name}`;
-                    const relativeLabelPath = `${LABEL_DIR}/${baseName}${labelExt}`;
-
-                    createCard(baseName + photoExt, relativePhotoPath, relativeLabelPath, labelExt);
-                });
-
-            } catch (error) {
-                console.error(error);
-                gallery.innerHTML = `<div class="error-msg">
-                    <strong>Error loading ${datasetType} set</strong><br/>
-                    ${error.message}<br/><br/>
+            // Check if data loaded correctly
+            if (typeof GALLERY_DATA === 'undefined') {
+                gallery.innerHTML = `<div style="color:red; text-align:center;">
+                    <strong>Error: gallery_data.js not found.</strong><br>
+                    Please run 'python generate_data.py' locally and push the file to GitHub.
                 </div>`;
+                return;
             }
+
+            const files = GALLERY_DATA[datasetType];
+            
+            if (!files || files.length === 0) {
+                gallery.innerHTML = `<p style="color:#666;">No images found for ${datasetType}.</p>`;
+                return;
+            }
+
+            // Create cards
+            files.forEach(filename => {
+                const photoPath = `images/${datasetType}/${filename}`;
+                // This assumes labels are .txt. If you use .json, change extension below
+                const labelPath = `labels/${datasetType}/${getBaseName(filename)}.txt`;
+                
+                createCard(filename, photoPath, labelPath);
+            });
         }
 
-        function createCard(fileName, photoPath, labelPath, labelExt) {
+        function createCard(fileName, photoPath, labelPath) {
             const card = document.createElement('div');
             card.className = 'card';
 
@@ -298,34 +232,27 @@
             img.src = photoPath; 
             img.loading = "lazy"; 
             img.alt = fileName;
-            
-            // Add click event to open modal
-            img.onclick = function() {
-                openModal(this.src);
-            };
+            img.onclick = () => openModal(img.src);
             
             const labelBox = document.createElement('div');
             labelBox.className = 'label-box';
             labelBox.innerText = "Loading label...";
 
-            if (labelExt === ".txt" || labelExt === ".json" || labelExt === ".xml") {
-                fetch(labelPath)
-                    .then(res => {
-                        if(!res.ok) throw new Error("Missing");
-                        return res.text();
-                    })
-                    .then(text => {
-                        if(labelExt === ".json") {
-                            try { labelBox.innerText = JSON.stringify(JSON.parse(text), null, 2); }
-                            catch(e) { labelBox.innerText = text; }
-                        } else {
-                            labelBox.innerText = text;
-                        }
-                    })
-                    .catch(() => labelBox.innerText = "No label file found.");
-            } else {
-                labelBox.innerHTML = `<img src="${labelPath}" style="height:100px; object-fit:contain; border:none;">`;
-            }
+            // Fetch the label text
+            fetch(labelPath)
+                .then(res => {
+                    if(!res.ok) throw new Error("Missing");
+                    return res.text();
+                })
+                .then(text => {
+                    // Try to pretty print if it's JSON, otherwise just show text
+                    try { 
+                        labelBox.innerText = JSON.stringify(JSON.parse(text), null, 2); 
+                    } catch(e) { 
+                        labelBox.innerText = text; 
+                    }
+                })
+                .catch(() => labelBox.innerText = "No label file found.");
 
             card.appendChild(header);
             card.appendChild(img);
@@ -333,7 +260,7 @@
             gallery.appendChild(card);
         }
 
-        // Initialize with TRAIN set by default
+        // Initialize
         switchDataset('train');
     </script>
 
