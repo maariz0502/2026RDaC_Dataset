@@ -2,6 +2,8 @@
 <html>
 <head>
     <title>Dataset Viewer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
     <style>
         body { 
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -12,13 +14,15 @@
             margin: 0;
             padding: 40px 20px;
         }
-        h1 { margin-bottom: 10px; color: #222; text-align: center; }
-        h2 { margin-bottom: 30px; color: #555; font-weight: normal; }
+        h1 { margin-bottom: 10px; color: #222; text-align: center; font-size: 1.5rem; }
+        h2 { margin-bottom: 30px; color: #555; font-weight: normal; text-align: center; font-size: 1.1rem; }
         
         /* === Controls === */
         .controls {
             margin-bottom: 30px;
             display: flex;
+            flex-wrap: wrap; /* Allow buttons to stack on very small screens */
+            justify-content: center;
             gap: 15px;
             background: white;
             padding: 10px 20px;
@@ -63,10 +67,12 @@
             padding: 10px; 
             border-radius: 8px; 
             box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+            /* Default Desktop Width */
             width: 300px; 
             display: flex;
             flex-direction: column;
             border: 1px solid #e1e4e8;
+            box-sizing: border-box; /* Ensures padding doesn't add to width */
         }
 
         .card-header {
@@ -79,7 +85,7 @@
 
         .card img { 
             width: 100%; 
-            height: 200px; 
+            height: 200px; /* Fixed height for desktop consistency */
             border-radius: 4px; 
             display: block; 
             object-fit: contain; 
@@ -107,6 +113,48 @@
             overflow-y: auto;
         }
 
+        /* Header Logo Styling */
+        .header img {
+            max-height: 150px; 
+            max-width: 100%; 
+            height: auto; 
+            margin-bottom: 20px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* === 2. MOBILE RESPONSIVENESS === */
+        @media (max-width: 600px) {
+            body {
+                padding: 20px 10px; /* Reduce padding on mobile */
+            }
+
+            .card {
+                width: 100%; /* Card takes full width */
+                max-width: 450px; /* Stop it from getting too big on tablets */
+            }
+
+            .card img {
+                /* Allow image to grow taller if needed, or keep fixed depending on preference.
+                   'contain' ensures we see the whole traffic light image. */
+                height: 250px; 
+            }
+
+            .controls {
+                width: 100%;
+                box-sizing: border-box;
+                border-radius: 12px; /* Less rounded corners on mobile */
+            }
+            
+            .btn {
+                flex: 1; /* Buttons share width equally */
+                text-align: center;
+                padding: 12px 10px;
+                font-size: 0.9rem;
+            }
+        }
+
         /* Modal */
         #imageModal {
             display: none;
@@ -115,22 +163,23 @@
             left: 0; top: 0;
             width: 100%; height: 100%; 
             overflow: auto; 
-            background-color: rgba(0,0,0,0.85); 
+            background-color: rgba(0,0,0,0.9); 
             align-items: center; justify-content: center;
         }
 
         .modal-content {
             margin: auto; display: block;
-            max-width: 90%; max-height: 90vh;
+            max-width: 95%; max-height: 90vh; /* Bigger on mobile modal */
             border-radius: 5px;
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
             animation: zoom 0.3s;
+            object-fit: contain;
         }
 
         @keyframes zoom { from {transform:scale(0)} to {transform:scale(1)} }
 
         .close {
-            position: absolute; top: 20px; right: 35px;
+            position: absolute; top: 20px; right: 25px;
             color: #f1f1f1; font-size: 40px; font-weight: bold;
             transition: 0.3s; cursor: pointer; z-index: 1001;
         }
@@ -140,9 +189,9 @@
 <body>
 
     <div class="header">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/a/a7/UCO-logo.gif" alt="Logo of UCO" style="max-height: 200; max-width: 600px; margin-bottom:20px;">
-            <h1>Dataset for Affordable Traffic Light Recognition under Monocular Night Vision in Oklahoma</h1>
-            <h2>Mohammad Aariz, Shuai Zhang</h2>
+        <img src="https://upload.wikimedia.org/wikipedia/commons/a/a7/UCO-logo.gif" alt="Logo of UCO">
+        <h1>Dataset for Affordable Traffic Light Recognition under Monocular Night Vision in Oklahoma</h1>
+        <h2>Mohammad Aariz, Shuai Zhang</h2>
     </div>
     
     <div class="controls">
@@ -168,10 +217,7 @@
 
         // Helper functions
         const getBaseName = (filename) => filename.replace(/\.[^/.]+$/, "");
-        // Simple heuristic: assumes label is .txt. If you have mixed .json/.txt, 
-        // the python script could be updated to map them, but this usually works fine:
-        const getLabelPath = (dir, filename) => `labels/${dir}/${getBaseName(filename)}.txt`;
-
+        
         // === Modal Logic ===
         function openModal(imgSrc) {
             modal.style.display = "flex";
@@ -182,7 +228,6 @@
 
         // === Dataset Logic ===
         function switchDataset(type) {
-            // Update Buttons
             if (type === 'train') {
                 btnTrain.classList.add('active');
                 btnVal.classList.remove('active');
@@ -196,11 +241,10 @@
         function loadGallery(datasetType) {
             gallery.innerHTML = '';
             
-            // Check if data loaded correctly
             if (typeof GALLERY_DATA === 'undefined') {
                 gallery.innerHTML = `<div style="color:red; text-align:center;">
                     <strong>Error: gallery_data.js not found.</strong><br>
-                    Please run 'python generate_data.py' locally and push the file to GitHub.
+                    Please run 'python generate_data.py' locally.
                 </div>`;
                 return;
             }
@@ -215,9 +259,7 @@
             // Create cards
             files.forEach(filename => {
                 const photoPath = `images/${datasetType}/${filename}`;
-                // This assumes labels are .txt. If you use .json, change extension below
                 const labelPath = `labels/${datasetType}/${getBaseName(filename)}.txt`;
-                
                 createCard(filename, photoPath, labelPath);
             });
         }
@@ -240,14 +282,12 @@
             labelBox.className = 'label-box';
             labelBox.innerText = "Loading label...";
 
-            // Fetch the label text
             fetch(labelPath)
                 .then(res => {
                     if(!res.ok) throw new Error("Missing");
                     return res.text();
                 })
                 .then(text => {
-                    // Try to pretty print if it's JSON, otherwise just show text
                     try { 
                         labelBox.innerText = JSON.stringify(JSON.parse(text), null, 2); 
                     } catch(e) { 
