@@ -55,7 +55,7 @@ window.onclick = function(event) {
 // === Infinite Scroll Logic ===
 let currentFiles = [];
 let loadedCount = 0;
-let currentDatasetType = 'normal'; 
+let currentDatasetType = 'Normal'; // Default to Capitalized
 const BATCH_SIZE = 12; 
 let observer;
 let isLoading = false;
@@ -80,9 +80,9 @@ function switchDataset(type) {
     // Update Buttons UI
     [btnNormal, btnSnow, btnRain].forEach(btn => btn.classList.remove('active'));
     
-    if (type === 'normal') btnNormal.classList.add('active');
-    else if (type === 'snow') btnSnow.classList.add('active');
-    else if (type === 'rain') btnRain.classList.add('active');
+    if (type === 'Normal') btnNormal.classList.add('active');
+    else if (type === 'Snow') btnSnow.classList.add('active');
+    else if (type === 'Rain') btnRain.classList.add('active');
     
     // Reset Gallery State
     gallery.innerHTML = '';
@@ -100,7 +100,7 @@ function loadGalleryData(datasetType) {
         return;
     }
 
-    currentFiles = GALLERY_DATA[datasetType] || [];
+    currentFiles = GALLERY_DATA[datasetType] || GALLERY_DATA[datasetType.toLowerCase()] || [];
     
     if (currentFiles.length === 0) {
         gallery.innerHTML = `<p style="color:#666;">No images found for ${datasetType}.</p>`;
@@ -169,5 +169,5 @@ function createCard(fileName, photoPath) {
     gallery.appendChild(card);
 }
 
-// Initialize with 'normal'
-switchDataset('normal');
+// Initialize with 'Normal' (Capitalized)
+switchDataset('Normal');
