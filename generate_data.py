@@ -3,7 +3,7 @@ import json
 
 # --- CONFIGURATION ---
 BASE_DIR = "inference"
-CATEGORIES = ["Normal", "Snow", "Rain"]
+CATEGORIES = ["normal", "snow", "rain"]
 # The specific subfolder structure inside each category
 SUB_PATH = os.path.join("overall", "previews") 
 OUTPUT_FILE = "gallery_data.js"
