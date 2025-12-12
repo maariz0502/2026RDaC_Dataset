@@ -1,0 +1,239 @@
+body { 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    background: #f4f6f8; 
+    margin: 0;
+    padding: 40px 20px;
+}
+h1 { margin-bottom: 10px; color: #222; text-align: center; font-size: 1.5rem; }
+h2 { margin-bottom: 30px; color: #555; font-weight: normal; text-align: center; font-size: 1.1rem; }
+
+
+/* === Download Links === */
+.download-section {
+    margin-bottom: 30px;
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.dl-link {
+    text-decoration: none;
+    color: #0366d6;
+    background: #e1f0ff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    border: 1px solid #cce5ff;
+    transition: background 0.2s;
+}
+
+.dl-link:hover {
+    background: #cfe6ff;
+    text-decoration: underline;
+}
+
+/* === Controls === */
+.controls {
+    margin-bottom: 30px;
+    display: flex;
+    flex-wrap: wrap; 
+    justify-content: center;
+    gap: 15px;
+    background: white;
+    padding: 10px 20px;
+    border-radius: 50px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.video-section {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 15px;   
+    margin-bottom: 30px;
+}
+
+.btn-yt {
+    border: 1px solid #d1d5da;
+    background: white;
+    padding: 10px 24px;
+    border-radius: 10px;
+    font-size: 1rem;
+    cursor: pointer;
+    font-weight: 600;
+    color: #003366;
+    transition: all 0.2s ease;
+}
+
+
+.btn {
+    border: 1px solid #d1d5da;
+    background: white;
+    padding: 10px 24px;
+    border-radius: 20px;
+    font-size: 1rem;
+    cursor: pointer;
+    font-weight: 600;
+    color: #000000;
+    transition: all 0.2s ease;
+}
+
+.btn:hover { background: #f6f8fa; }
+
+.btn.active {
+    background: #003366;
+    color: #FFCC00;
+    border-color: #003366;
+    box-shadow: 0 2px 5px rgba(3, 102, 214, 0.3);
+}
+
+/* Gallery Grid */
+#gallery { 
+    display: flex; 
+    flex-wrap: wrap; 
+    justify-content: center; 
+    gap: 20px; 
+    max-width: 1400px;
+    width: 100%;
+}
+
+/* Cards */
+.card { 
+    background: white; 
+    padding: 10px; 
+    border-radius: 8px; 
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05); 
+    width: 300px; 
+    display: flex;
+    flex-direction: column;
+    border: 1px solid #e1e4e8;
+    box-sizing: border-box; 
+    animation: fadeIn 0.4s ease forwards;
+    opacity: 0; 
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.card-header {
+    font-size: 0.85em;
+    color: #586069;
+    margin-bottom: 8px;
+    font-family: monospace; 
+    word-break: break-all;
+}
+
+.card img { 
+    width: 100%; 
+    height: 200px; 
+    border-radius: 4px; 
+    display: block; 
+    object-fit: contain; 
+    background-color: #f6f8fa; 
+    border: 1px solid #eaecef;
+    cursor: zoom-in;
+    transition: opacity 0.2s;
+}
+
+.card img:hover { opacity: 0.8; }
+
+.label-box { 
+    margin-top: 10px;
+    background: #fafbfc;
+    border: 1px solid #e1e4e8;
+    padding: 10px;
+    border-radius: 4px;
+    font-size: 0.85em; 
+    color: #24292e;
+    white-space: pre-wrap; 
+    word-wrap: break-word;
+    flex-grow: 1; 
+    font-family: monospace;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+/* Sentinel & Spinner */
+#sentinel {
+    width: 100%;
+    height: 50px;
+    margin-top: 20px;
+}
+
+.loading-spinner {
+    display: none; 
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #3498db;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin: 20px auto;
+}
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+.header img {
+    max-height: 150px; 
+    max-width: 100%; 
+    height: auto; 
+    margin-bottom: 20px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+@media (max-width: 600px) {
+    body { padding: 20px 10px; }
+    .card { width: 100%; max-width: 450px; }
+    .card img { height: 250px; }
+    .controls { width: 100%; box-sizing: border-box; border-radius: 12px; }
+    .btn { flex: 1; text-align: center; padding: 12px 10px; font-size: 0.9rem; }
+}
+
+/* === Modals (Image & Video) === */
+/* Combined selector to ensure both have the black background */
+#imageModal, #videoModal {
+    display: none;
+    position: fixed; 
+    z-index: 1000; 
+    left: 0; top: 0;
+    width: 100%; height: 100%; 
+    overflow: auto; 
+    background-color: rgba(0,0,0,0.9); 
+    align-items: center; justify-content: center;
+}
+
+.modal-content {
+    margin: auto; display: block;
+    max-width: 95%; max-height: 90vh; 
+    border-radius: 5px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    animation: zoom 0.3s;
+    object-fit: contain;
+}
+
+@keyframes zoom { from {transform:scale(0)} to {transform:scale(1)} }
+
+.close {
+    position: absolute; top: 20px; right: 25px;
+    color: #f1f1f1; font-size: 40px; font-weight: bold;
+    transition: 0.3s; cursor: pointer; z-index: 1001;
+}
+.close:hover { color: #bbb; }
+
+.modal-content-video {
+    margin: auto;
+    display: flex;
+    width: 80%;
+    max-width: 900px;
+    height: 80%;
+    justify-content: center;
+    align-items: center;
+}

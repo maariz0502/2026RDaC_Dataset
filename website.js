@@ -3,6 +3,9 @@ const btnNormal = document.getElementById('btn-normal');
 const btnSnow = document.getElementById('btn-snow');
 const btnRain = document.getElementById('btn-rain');
 
+// --- Video Elements ---
+const videoModal = document.getElementById('videoModal'); 
+const videoFrame = document.getElementById('videoFrame');
 const modal = document.getElementById('imageModal');
 const modalImg = document.getElementById("img01");
 const loader = document.getElementById('loader');
@@ -11,20 +14,48 @@ const sentinel = document.getElementById('sentinel');
 // Helper functions
 const getBaseName = (filename) => filename.replace(/\.[^/.]+$/, "");
 
-// === Modal Logic ===
+// === Image Modal Logic ===
 function openModal(imgSrc) {
     modal.style.display = "flex";
     modalImg.src = imgSrc;
 }
-function closeModal() { modal.style.display = "none"; }
-document.addEventListener('keydown', (e) => { if (e.key === "Escape") closeModal(); });
+function closeModal() { 
+    modal.style.display = "none"; 
+}
+
+// === Video Modal Logic ===
+function openVideoModal(videoUrl) {
+    videoModal.style.display = "flex";
+    videoFrame.src = videoUrl; 
+}
+
+function closeVideoModal() {
+    videoModal.style.display = "none";
+    videoFrame.src = ""; // Stops video from playing in background
+}
+
+// Global Keydown (Closes both Image and Video modals on Escape)
+document.addEventListener('keydown', (e) => { 
+    if (e.key === "Escape") {
+        closeModal();
+        closeVideoModal();
+    }
+});
+
+// Click outside modal to close
+window.onclick = function(event) {
+    if (event.target === videoModal) {
+        closeVideoModal();
+    }
+    if (event.target === modal) {
+        closeModal();
+    }
+}
 
 // === Infinite Scroll Logic ===
 let currentFiles = [];
 let loadedCount = 0;
 let currentDatasetType = 'normal'; 
-// CHANGE 1: Increase Batch Size to 12. 
-// 4 is too small for big monitors; 12 ensures the screen fills up.
 const BATCH_SIZE = 12; 
 let observer;
 let isLoading = false;
@@ -95,7 +126,6 @@ function renderNextBatch() {
     const nextBatch = currentFiles.slice(loadedCount, loadedCount + BATCH_SIZE);
 
     nextBatch.forEach(filename => {
-        // Path logic matches your folder structure
         const photoPath = `inference/${currentDatasetType}/overall/previews/${filename}`;        
         const labelPath = `labels/${currentDatasetType}/${getBaseName(filename)}.txt`;
         
@@ -105,7 +135,6 @@ function renderNextBatch() {
     loadedCount += nextBatch.length;
     loader.style.display = 'none';
     
-    // Allow a tiny delay for DOM paint, then release lock and check if we need more
     setTimeout(() => {
         isLoading = false;
         checkIfShouldLoadMore();
@@ -113,10 +142,8 @@ function renderNextBatch() {
 }
 
 function checkIfShouldLoadMore() {
-    // If we still have files...
     if (loadedCount < currentFiles.length) {
         const sentinelRect = sentinel.getBoundingClientRect();
-        // Check if the sentinel is STILL visible on screen (meaning we have empty space)
         if (sentinelRect.top <= window.innerHeight) {
             renderNextBatch();
         }
@@ -128,6 +155,7 @@ function createCard(fileName, photoPath) {
     card.className = 'card';
 
     const header = document.createElement('div');
+    card.appendChild(header);
     header.className = 'card-header';
     header.innerText = fileName;
 
@@ -137,7 +165,6 @@ function createCard(fileName, photoPath) {
     img.alt = fileName;
     img.onclick = () => openModal(img.src);
 
-    card.appendChild(header);
     card.appendChild(img);
     gallery.appendChild(card);
 }
