@@ -1,5 +1,5 @@
 const GALLERY_DATA = {
-    "normal": [
+    "Normal": [
         "20231010_210247_frame_at_101s.png",
         "20231010_210247_frame_at_108.0s.png",
         "20231010_210247_frame_at_111.0s.png",
@@ -222,7 +222,7 @@ const GALLERY_DATA = {
         "FILE20231203-212511-000567_frame_at_2s.png",
         "FILE20231203-212511-000567_frame_at_6.0s.png"
     ],
-    "snow": [
+    "Snow": [
         "20240706_051551_rotated_frame_at_102s.png",
         "20240706_051551_rotated_frame_at_104s.png",
         "20240706_051551_rotated_frame_at_109.0s.png",
@@ -407,7 +407,7 @@ const GALLERY_DATA = {
         "Snow Day 2 Night (8)_frame_at_152.0s.png",
         "Snow Day 2 Night (9)_frame_at_135.0s.png"
     ],
-    "rain": [
+    "Rain": [
         "20240712_101806_rotated_frame_at_104s.png",
         "20240712_101806_rotated_frame_at_106s.png",
         "20240712_101806_rotated_frame_at_108s.png",
