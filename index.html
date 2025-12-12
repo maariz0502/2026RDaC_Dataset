@@ -17,6 +17,32 @@
         h1 { margin-bottom: 10px; color: #222; text-align: center; font-size: 1.5rem; }
         h2 { margin-bottom: 30px; color: #555; font-weight: normal; text-align: center; font-size: 1.1rem; }
         
+        /* === Download Links === */
+        .download-section {
+            margin-bottom: 30px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .dl-link {
+            text-decoration: none;
+            color: #0366d6;
+            background: #e1f0ff;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border: 1px solid #cce5ff;
+            transition: background 0.2s;
+        }
+        
+        .dl-link:hover {
+            background: #cfe6ff;
+            text-decoration: underline;
+        }
+
         /* === Controls === */
         .controls {
             margin-bottom: 30px;
@@ -38,16 +64,16 @@
             font-size: 1rem;
             cursor: pointer;
             font-weight: 600;
-            color: #586069;
+            color: #003366;
             transition: all 0.2s ease;
         }
 
         .btn:hover { background: #f6f8fa; }
 
         .btn.active {
-            background: #0366d6;
-            color: white;
-            border-color: #0366d6;
+            background: #003366;
+            color: #FFCC00;
+            border-color: #003366;
             box-shadow: 0 2px 5px rgba(3, 102, 214, 0.3);
         }
 
@@ -72,9 +98,8 @@
             flex-direction: column;
             border: 1px solid #e1e4e8;
             box-sizing: border-box; 
-            /* Animation for smooth entry */
             animation: fadeIn 0.4s ease forwards;
-            opacity: 0; /* Start hidden for animation */
+            opacity: 0; 
         }
 
         @keyframes fadeIn {
@@ -120,14 +145,13 @@
             overflow-y: auto;
         }
 
-        /* The Sentinel: Invisible element at the bottom to trigger scrolling */
+        /* Sentinel & Spinner */
         #sentinel {
             width: 100%;
-            height: 50px; /* Give it height so it's easily detectable */
+            height: 50px;
             margin-top: 20px;
         }
 
-        /* Spinner for loading state */
         .loading-spinner {
             display: none; 
             border: 4px solid #f3f3f3;
@@ -196,10 +220,21 @@
         <h1>Dataset for Affordable Traffic Light Recognition under Monocular Night Vision in Oklahoma</h1>
         <h2>Mohammad Aariz, Shuai Zhang</h2>
     </div>
-    
+
+    <div class="download-section">
+        <a href="https://drive.google.com/uc?export=download&id=15DihzZ2aNiKzeGrHyob2n6LVuv5tH6G7" class="dl-link">
+            Download inference.zip
+        </a>
+
+        <a href="https://drive.google.com/uc?export=download&id=1RXjhKqYTFQOUlXEXjWuNkETjM_Gu23hz" class="dl-link">
+            Download images.zip
+        </a>
+    </div>
+
     <div class="controls">
-        <button id="btn-train" class="btn active" onclick="switchDataset('train')">Training Set</button>
-        <button id="btn-val" class="btn" onclick="switchDataset('val')">Validation Set</button>
+        <button id="btn-normal" class="btn active" onclick="switchDataset('normal')">Normal</button>
+        <button id="btn-snow" class="btn" onclick="switchDataset('snow')">Snow</button>
+        <button id="btn-rain" class="btn" onclick="switchDataset('rain')">Rain</button>
     </div>
 
     <div id="gallery"></div>
@@ -213,174 +248,7 @@
     </div>
 
     <script src="gallery_data.js"></script>
-
-    <script>
-        const gallery = document.getElementById('gallery');
-        const btnTrain = document.getElementById('btn-train');
-        const btnVal = document.getElementById('btn-val');
-        const modal = document.getElementById('imageModal');
-        const modalImg = document.getElementById("img01");
-        const loader = document.getElementById('loader');
-        const sentinel = document.getElementById('sentinel');
-
-        // Helper functions
-        const getBaseName = (filename) => filename.replace(/\.[^/.]+$/, "");
-        
-        // === Modal Logic ===
-        function openModal(imgSrc) {
-            modal.style.display = "flex";
-            modalImg.src = imgSrc;
-        }
-        function closeModal() { modal.style.display = "none"; }
-        document.addEventListener('keydown', (e) => { if (e.key === "Escape") closeModal(); });
-
-        // === Infinite Scroll Logic ===
-        let currentFiles = [];
-        let loadedCount = 0;
-        const BATCH_SIZE = 4;
-        let observer;
-        let isLoading = false;
-
-        // The Observer sees when the user hits the bottom
-        const observerOptions = {
-            root: null,
-            rootMargin: '100px', // trigger a bit before reaching exact bottom
-            threshold: 0.1
-        };
-
-        const handleIntersect = (entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting && !isLoading) {
-                    renderNextBatch();
-                }
-            });
-        };
-
-        function switchDataset(type) {
-            // Update UI
-            if (type === 'train') {
-                btnTrain.classList.add('active');
-                btnVal.classList.remove('active');
-            } else {
-                btnVal.classList.add('active');
-                btnTrain.classList.remove('active');
-            }
-            
-            // Reset State
-            gallery.innerHTML = '';
-            loadedCount = 0;
-            currentFiles = [];
-            
-            // Cleanup old observer
-            if (observer) observer.disconnect();
-            
-            // Initialize
-            loadGalleryData(type);
-        }
-
-        function loadGalleryData(datasetType) {
-            if (typeof GALLERY_DATA === 'undefined') {
-                gallery.innerHTML = `<div style="color:red; text-align:center;">Error: gallery_data.js not found.</div>`;
-                return;
-            }
-
-            currentFiles = GALLERY_DATA[datasetType] || [];
-            
-            if (currentFiles.length === 0) {
-                gallery.innerHTML = `<p style="color:#666;">No images found for ${datasetType}.</p>`;
-                return;
-            }
-
-            // Start observing the sentinel
-            observer = new IntersectionObserver(handleIntersect, observerOptions);
-            observer.observe(sentinel);
-            
-            // Initial load
-            renderNextBatch(); 
-        }
-
-        function renderNextBatch() {
-            if (loadedCount >= currentFiles.length) {
-                loader.style.display = 'none';
-                return; // Nothing left to load
-            }
-
-            isLoading = true;
-            loader.style.display = 'block';
-
-            const nextBatch = currentFiles.slice(loadedCount, loadedCount + BATCH_SIZE);
-            const datasetType = btnTrain.classList.contains('active') ? 'train' : 'val';
-
-            // Create cards
-            nextBatch.forEach(filename => {
-                const photoPath = `images/${datasetType}/${filename}`;
-                const labelPath = `labels/${datasetType}/${getBaseName(filename)}.txt`;
-                createCard(filename, photoPath, labelPath);
-            });
-
-            loadedCount += nextBatch.length;
-            loader.style.display = 'none';
-            isLoading = false;
-
-            checkIfShouldLoadMore();
-        }
-
-        function checkIfShouldLoadMore() {
-            // Give the DOM a moment to paint the new images
-            setTimeout(() => {
-                const sentinelRect = sentinel.getBoundingClientRect();
-                const windowHeight = window.innerHeight;
-
-                // If sentinel is above the bottom of the screen (visible)
-                // AND we still have files to load
-                if (sentinelRect.top <= windowHeight && loadedCount < currentFiles.length) {
-                    // Recursive call to fill the screen
-                    renderNextBatch();
-                }
-            }, 100);
-        }
-
-        function createCard(fileName, photoPath, labelPath) {
-            const card = document.createElement('div');
-            card.className = 'card';
-
-            const header = document.createElement('div');
-            header.className = 'card-header';
-            header.innerText = fileName;
-
-            const img = document.createElement('img');
-            img.src = photoPath; 
-            img.loading = "lazy"; 
-            img.alt = fileName;
-            img.onclick = () => openModal(img.src);
-            
-            const labelBox = document.createElement('div');
-            labelBox.className = 'label-box';
-            labelBox.innerText = "Loading label...";
-
-            fetch(labelPath)
-                .then(res => {
-                    if(!res.ok) throw new Error("Missing");
-                    return res.text();
-                })
-                .then(text => {
-                    try { 
-                        labelBox.innerText = JSON.stringify(JSON.parse(text), null, 2); 
-                    } catch(e) { 
-                        labelBox.innerText = text; 
-                    }
-                })
-                .catch(() => labelBox.innerText = "No label file found.");
-
-            card.appendChild(header);
-            card.appendChild(img);
-            card.appendChild(labelBox);
-            gallery.appendChild(card);
-        }
-
-        // Initialize
-        switchDataset('train');
-    </script>
+    <script src="website.js"></script>
 
 </body>
 </html>

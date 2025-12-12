@@ -1,39 +1,56 @@
-# Script for generating file paths to each image/label.
 import os
 import json
 
-# Define where your images are
-DIRS = {
-    "train": "images/train",
-    "val":   "images/val"
-}
+# --- CONFIGURATION ---
+BASE_DIR = "inference"
+CATEGORIES = ["normal", "snow", "rain"]
+# The specific subfolder structure inside each category
+SUB_PATH = os.path.join("overall", "previews") 
+OUTPUT_FILE = "gallery_data.js"
+ALLOWED_EXTENSIONS = ('.jpg', '.jpeg', '.png', '.webp')
+# ---------------------
 
-# Supported image extensions
-EXTS = ('.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg')
+def generate_gallery_data():
+    """
+    Scans inference/{category}/overall/previews and generates a JS file.
+    """
+    data = {}
 
-data = { "train": [], "val": [] }
+    print(f"Scanning '{BASE_DIR}' folder structure...")
 
-print("Scanning directories...")
+    for category in CATEGORIES:
+        # Construct the full path: inference/normal/overall/previews
+        folder_path = os.path.join(BASE_DIR, category, SUB_PATH)
+        images_list = []
 
-for dataset_type, folder_path in DIRS.items():
-    if not os.path.exists(folder_path):
-        print(f"Warning: {folder_path} not found.")
-        continue
-        
-    # List all files in the directory
-    files = sorted(os.listdir(folder_path))
-    
-    # Filter only images
-    for f in files:
-        if f.lower().endswith(EXTS):
-            data[dataset_type].append(f)
+        if os.path.exists(folder_path):
+            # Get all files in the directory
+            files = os.listdir(folder_path)
             
-    print(f"Found {len(data[dataset_type])} images in {dataset_type}")
+            # Filter for images and sort them alphabetically
+            images_list = [
+                f for f in files 
+                if f.lower().endswith(ALLOWED_EXTENSIONS)
+            ]
+            images_list.sort()
+            
+            print(f"  - Found {len(images_list)} images in '{category}'")
+            print(f"    (Path: {folder_path})")
+        else:
+            print(f"  ! Warning: Folder not found: {folder_path}")
+        
+        # Add to the dictionary
+        data[category] = images_list
 
-# Write to a JavaScript file
-output_content = f"const GALLERY_DATA = {json.dumps(data, indent=2)};"
+    # Generate the JavaScript file content
+    js_content = f"const GALLERY_DATA = {json.dumps(data, indent=4)};"
 
-with open("gallery_data.js", "w") as f:
-    f.write(output_content)
+    try:
+        with open(OUTPUT_FILE, "w") as f:
+            f.write(js_content)
+        print(f"\nSuccess! Generated '{OUTPUT_FILE}'")
+    except Exception as e:
+        print(f"\nError writing file: {e}")
 
-print("\nSuccess! Created 'gallery_data.js'.")
+if __name__ == "__main__":
+    generate_gallery_data()
